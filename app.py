@@ -1,7 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from database import database
 from fastapi import Query
+import asyncio
+
 app = FastAPI(title="UFC Backend API")
+
+@app.on_event("startup")
+async def startup_event():
+    try:
+        # Test MongoDB connection on startup
+        await database.command("ping")
+    except Exception as e:
+        print(f"Warning: MongoDB connection test failed: {str(e)}")
 
 @app.get("/")
 async def health_check():
@@ -9,51 +19,85 @@ async def health_check():
 
 @app.get("/fighterlogs")
 async def getfighter(name: str | None = Query(default=None)):
-    collection = database["fighterlogs"]
-    logs = []
+    try:
+        collection = database["fighterlogs"]
+        logs = []
 
-    query = {}
-    if name:
-        query = {
-            "$or": [
-                {"first_name": {"$regex": name, "$options": "i"}},
-                {"last_name": {"$regex": name, "$options": "i"}},
-            ]
-        }
+        query = {}
+        if name:
+            query = {
+                "$or": [
+                    {"first_name": {"$regex": name, "$options": "i"}},
+                    {"last_name": {"$regex": name, "$options": "i"}},
+                ]
+            }
 
-    async for log in collection.find(query):
-        log["_id"] = str(log["_id"])
-        logs.append(log)
-
-    return logs
+        async def fetch_logs():
+            async for log in collection.find(query):
+                log["_id"] = str(log["_id"])
+                logs.append(log)
+        
+        await asyncio.wait_for(fetch_logs(), timeout=30)
+        return logs
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Database query timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 @app.get("/upcomingevents")
 async def get_upcomingevents():
-    collection = database["upcomingevents"]
-    events = []
-    async for event in collection.find():
-        event["_id"] = str(event["_id"])
-        events.append(event)
-    return events
+    try:
+        collection = database["upcomingevents"]
+        events = []
+        
+        async def fetch_events():
+            async for event in collection.find():
+                event["_id"] = str(event["_id"])
+                events.append(event)
+        
+        await asyncio.wait_for(fetch_events(), timeout=30)
+        return events
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Database query timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-# Get all past events
+
 @app.get("/pastevents")
 async def get_pastevents():
-    collection = database["pastevents"]
-    events = []
-    async for event in collection.find():
-        event["_id"] = str(event["_id"])
-        events.append(event)
-    return events
+    try:
+        collection = database["pastevents"]
+        events = []
+        
+        async def fetch_events():
+            async for event in collection.find():
+                event["_id"] = str(event["_id"])
+                events.append(event)
+        
+        await asyncio.wait_for(fetch_events(), timeout=30)
+        return events
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Database query timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-# Get all rankings
+
 @app.get("/rankings")
 async def get_rankings():
-    collection = database["rankings"]
-    rankings = []
-    async for ranking in collection.find():
-        ranking["_id"] = str(ranking["_id"])
-        rankings.append(ranking)
-    return rankings
+    try:
+        collection = database["rankings"]
+        rankings = []
+        
+        async def fetch_rankings():
+            async for ranking in collection.find():
+                ranking["_id"] = str(ranking["_id"])
+                rankings.append(ranking)
+        
+        await asyncio.wait_for(fetch_rankings(), timeout=30)
+        return rankings
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Database query timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
