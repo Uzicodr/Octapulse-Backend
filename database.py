@@ -1,7 +1,6 @@
 import motor.motor_asyncio
 from dotenv import load_dotenv
 import os
-import ssl
 
 load_dotenv()
 
@@ -9,24 +8,33 @@ MONGODB_URL = os.getenv("MONGODB_URL")
 if not MONGODB_URL:
     raise ValueError("MONGODB_URL environment variable not set")
 
-# Create custom SSL context for Vercel environment
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+# Lazy-loaded MongoDB connection for Vercel serverless
+_client = None
+_database = None
 
-# MongoDB connection with Vercel-compatible settings
-client = motor.motor_asyncio.AsyncIOMotorClient(
-    MONGODB_URL,
-    tlsCAFile=None,
-    appName="ufc-backend",
-    maxPoolSize=10,
-    minPoolSize=1,
-    serverSelectionTimeoutMS=10000,
-    connectTimeoutMS=20000,
-    retryWrites=True
-)
+def get_client():
+    global _client
+    if _client is None:
+        _client = motor.motor_asyncio.AsyncIOMotorClient(
+            MONGODB_URL,
+            maxPoolSize=5,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+        )
+    return _client
 
-database = client["MMADatabase"]
+def get_database_instance():
+    global _database
+    if _database is None:
+        _database = get_client()["MMADatabase"]
+    return _database
 
-async def get_database():
-    return database
+# Proxy object for backward compatibility
+class DatabaseProxy:
+    def __getitem__(self, key):
+        return get_database_instance()[key]
+    
+    async def command(self, *args, **kwargs):
+        return await get_database_instance().command(*args, **kwargs)
+
+database = DatabaseProxy()

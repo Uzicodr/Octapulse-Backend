@@ -5,14 +5,6 @@ import asyncio
 
 app = FastAPI(title="UFC Backend API")
 
-@app.on_event("startup")
-async def startup_event():
-    try:
-        # Test MongoDB connection on startup
-        await database.command("ping")
-    except Exception as e:
-        print(f"Warning: MongoDB connection test failed: {str(e)}")
-
 @app.get("/")
 async def health_check():
     return {"status": "API is running"}
