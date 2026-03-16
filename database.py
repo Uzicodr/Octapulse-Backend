@@ -18,8 +18,6 @@ def get_client():
         _client = motor.motor_asyncio.AsyncIOMotorClient(
             MONGODB_URL,
             maxPoolSize=5,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
         )
     return _client
 
