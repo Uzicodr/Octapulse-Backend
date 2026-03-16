@@ -1,7 +1,7 @@
 {
   "buildCommand": "pip install -r requirements.txt",
   "functions": {
-    "app.py": {
+    "api/app.py": {
       "memory": 1024,
       "maxDuration": 30
     }
@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app.py"
+      "dest": "api/app.py"
     }
   ]
 }
