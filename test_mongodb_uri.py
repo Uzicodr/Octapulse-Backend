@@ -2,14 +2,9 @@ import os
 import sys
 
 import pymongo
-try:
-    from dotenv import load_dotenv
-except Exception:  # pragma: no cover - fallback when python-dotenv is not installed
-    def load_dotenv(path: str | None = None):
-        """Fallback noop when python-dotenv is unavailable."""
-        return None
+from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv
 def main() -> int:
     load_dotenv()
     load_dotenv("supabase/.env")
