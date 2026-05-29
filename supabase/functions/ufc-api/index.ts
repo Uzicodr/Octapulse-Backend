@@ -287,7 +287,7 @@ async function callGemini(message: string, history: ChatMessage[] = []): Promise
             },
           ],
         },
-        tools:[{ google_search: {} }],
+        tools: [{ google_search: {} }],
         contents: [
           ...safeHistory,
           {
@@ -370,7 +370,7 @@ async function findDocuments(
       const documents = await client
         .db(DATABASE_NAME)
         .collection(collection)
-        .find(filter)
+        .find(filter, { projection: {} })
         .toArray();
 
       return documents.map(normalizeDocument);
