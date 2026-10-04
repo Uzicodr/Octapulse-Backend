@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: octapulse-backend
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    url: ${DATABASE_URL_DIRECT:${DATABASE_URL}}
+    user: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
+
+server:
+  port: ${PORT:8080}
+
+cito:
+  api-key: ${CITO_API_KEY}
+  monthly-cap: ${CITO_MONTHLY_CAP:450}
+  base-url: https://api.citoapi.com/api/v1
+
+jwt:
+  secret: ${JWT_SECRET:}
+  access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+  refresh-token-days: ${REFRESH_TOKEN_DAYS:30}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
