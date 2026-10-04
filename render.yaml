@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: octapulse-backend
+    runtime: java
+    plan: free
+    buildCommand: mvn -B -DskipTests package
+    startCommand: java -jar target/backend-0.1.0.jar
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_DIRECT
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: CITO_API_KEY
+        sync: false
+      - key: CITO_MONTHLY_CAP
+        value: "450"
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

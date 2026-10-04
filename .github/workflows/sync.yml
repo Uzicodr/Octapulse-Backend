@@ -1,0 +1,37 @@
+name: Cito Sync
+
+on:
+  schedule:
+    - cron: "0 */8 * * *"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "events | rankings | bouts <slug>"
+        default: "events"
+        required: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build
+        run: mvn -B -DskipTests package
+      - name: Run sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          CITO_API_KEY: ${{ secrets.CITO_API_KEY }}
+          CITO_MONTHLY_CAP: ${{ vars.CITO_MONTHLY_CAP || '450' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          CMD="${{ github.event.inputs.command }}"
+          CMD="${CMD:-events}"
+          java -jar target/backend-*.jar --spring.profiles.active=sync $CMD
