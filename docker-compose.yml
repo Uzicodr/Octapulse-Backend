@@ -25,8 +25,6 @@ services:
       DATABASE_URL_DIRECT: jdbc:postgresql://postgres:5432/octapulse
       DATABASE_USERNAME: octapulse
       DATABASE_PASSWORD: octapulse
-      CITO_API_KEY: ${CITO_API_KEY}
-      CITO_MONTHLY_CAP: ${CITO_MONTHLY_CAP:-450}
       JWT_SECRET: ${JWT_SECRET:-ZT0jIqG52c+i3GqWFMe/M+/8ws4d4312WmYfVIZXsHQ=}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     ports:
