@@ -20,4 +20,10 @@ public final class AuthDto {
     public record RefreshRequest(@NotBlank String refreshToken) {}
 
     public record TokenResponse(String accessToken, String refreshToken) {}
+
+    public record LogoutRequest(@NotBlank String refreshToken) {}
+
+    public record PasswordResetRequest(@Email @NotBlank String email) {}
+
+    public record PasswordResetConfirm(@NotBlank String token, @NotBlank @Size(min = 8, max = 128) String newPassword) {}
 }

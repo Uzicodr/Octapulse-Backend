@@ -3,6 +3,7 @@ package com.octapulse.backend.web;
 import com.octapulse.backend.dto.AuthDto.*;
 import com.octapulse.backend.security.GoogleTokenVerifier;
 import com.octapulse.backend.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -43,5 +44,31 @@ public class AuthController {
     @PostMapping("/refresh")
     public TokenResponse refresh(@Valid @RequestBody RefreshRequest req) {
         return authService.refresh(req.refreshToken());
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody LogoutRequest req) {
+        authService.logout(req.refreshToken());
+    }
+
+    /** Revokes every refresh token for the signed-in user. Needs a valid access token. */
+    @PostMapping("/logout-all")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logoutAll(HttpServletRequest request) {
+        authService.logoutEverywhere(CurrentUser.require(request));
+    }
+
+    /** Always 202, whether or not the email has an account. */
+    @PostMapping("/password-reset/request")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void requestPasswordReset(@Valid @RequestBody PasswordResetRequest req) {
+        authService.requestPasswordReset(req.email());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirmPasswordReset(@Valid @RequestBody PasswordResetConfirm req) {
+        authService.confirmPasswordReset(req.token(), req.newPassword());
     }
 }
