@@ -6,6 +6,7 @@ import com.octapulse.backend.security.AuthInterceptor;
 import com.octapulse.backend.service.PickService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,7 +26,7 @@ public class PickController {
     @PostMapping
     public PickResponse createOrUpdate(@Valid @RequestBody PickRequest req, HttpServletRequest request) {
         UUID userId = currentUserId(request);
-        var pick = pickService.createOrUpdatePick(userId, req.fightId(), req.pickedFighterId());
+        var pick = pickService.createOrUpdatePick(userId, req);
         return PickResponse.from(pick);
     }
 
@@ -33,6 +34,12 @@ public class PickController {
     public List<PickResponse> mine(HttpServletRequest request) {
         UUID userId = currentUserId(request);
         return pickService.listForUser(userId).stream().map(PickResponse::from).collect(Collectors.toList());
+    }
+
+    @DeleteMapping("/{fightId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID fightId, HttpServletRequest request) {
+        pickService.deletePick(currentUserId(request), fightId);
     }
 
     private UUID currentUserId(HttpServletRequest request) {

@@ -31,6 +31,18 @@ public class Pick {
     @Column(name = "is_correct")
     private Boolean correct;
 
+    private String method;
+
+    private Integer round;
+
+    @Column(nullable = false)
+    private int confidence = 1;
+
+    private Integer points;
+
+    @Column(name = "settled_at")
+    private Instant settledAt;
+
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
@@ -44,4 +56,14 @@ public class Pick {
     public void setLockedAt(Instant lockedAt) { this.lockedAt = lockedAt; }
     public Boolean getCorrect() { return correct; }
     public void setCorrect(Boolean correct) { this.correct = correct; }
+    public String getMethod() { return method; }
+    public void setMethod(String method) { this.method = method; }
+    public Integer getRound() { return round; }
+    public void setRound(Integer round) { this.round = round; }
+    public int getConfidence() { return confidence; }
+    public void setConfidence(int confidence) { this.confidence = confidence; }
+    public Integer getPoints() { return points; }
+    public void setPoints(Integer points) { this.points = points; }
+    public Instant getSettledAt() { return settledAt; }
+    public void setSettledAt(Instant settledAt) { this.settledAt = settledAt; }
 }
