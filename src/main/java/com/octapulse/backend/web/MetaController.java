@@ -35,7 +35,8 @@ public class MetaController {
                 SELECT (SELECT MAX(updated_at) FROM events) AS events,
                        (SELECT MAX(updated_at) FROM fights) AS fights,
                        (SELECT MAX(updated_at) FROM fighters) AS fighters,
-                       (SELECT MAX(fetched_at) FROM rankings) AS rankings
+                       (SELECT MAX(fetched_at) FROM rankings) AS rankings,
+                       (SELECT MAX(fetched_at) FROM news_items) AS news
                 """, Map.of());
         Map<String, Instant> updated = new LinkedHashMap<>();
         row.forEach((k, v) -> updated.put(k, toInstant(v)));
