@@ -8,6 +8,17 @@ spring:
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:5}
       minimum-idle: 1
+      # Recycle and ping connections before the Supavisor pooler or the network drops them;
+      # otherwise the first commit after an idle period (Render sleep) hits a dead socket.
+      max-lifetime: 240000
+      idle-timeout: 120000
+      keepalive-time: 60000
+      connection-timeout: 20000
+      validation-timeout: 5000
+      data-source-properties:
+        # Supavisor transaction mode (port 6543) hands each transaction a different server
+        # connection, so pgjdbc's server-side prepared statements must stay off.
+        prepareThreshold: 0
   jpa:
     hibernate:
       ddl-auto: validate
