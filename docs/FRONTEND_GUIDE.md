@@ -151,7 +151,7 @@ Share invites as a link such as `<app>/join/<inviteCode>` that opens the join sc
 
 ## Notifications and push
 
-The in-app inbox works today. Device push is wired end to end on the API side, but no push provider (FCM/APNs) is connected yet, so registered devices receive nothing until the backend adds one. Register tokens now anyway; the same build will start receiving pushes later.
+Every notification lands in the in-app inbox. Pushes go out through Firebase Cloud Messaging once the backend has `FIREBASE_CREDENTIALS` and the app has its Firebase config files; see [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md) for the setup.
 
 | Action | Call | Notes |
 | --- | --- | --- |
@@ -160,18 +160,24 @@ The in-app inbox works today. Device push is wired end to end on the API side, b
 | Mark one read | `POST /me/notifications/{id}/read` | Returns the notification. |
 | Mark all read | `POST /me/notifications/read-all` | Returns `{unread: 0}`. |
 | Register device | `POST /me/devices` `{token, platform}` | Platform is `ios`, `android` or `web`. Call after login and whenever the OS rotates the token. `204`. |
-| Unregister device | `POST /me/devices/unregister` `{token}` | Call on logout. `204`. |
+| Unregister device | `POST /me/devices/unregister` `{token}` | Call on logout, before the session is cleared. `204`. |
+| Push settings | `GET /me/notification-settings` | `{live, results, news, announcements, reminders}`, all `true` until changed. |
+| Change settings | `PATCH /me/notification-settings` `{news: false}` | Send only the switches that change; returns the full settings. A switched-off kind still reaches the inbox, it just isn't pushed. |
 
-**Notification types.** Route taps with `type` plus `data`; `title` and `body` are ready to display.
+**Notification types.** Route taps with `type` plus `data`; `title` and `body` are ready to display. A push carries the same `data` plus `type`, all as strings.
 
-| `type` | When | `data` | Tap opens |
-| --- | --- | --- | --- |
-| `event_reminder` | Event starts within 24 h and you have unpicked fights | `{eventId, unpicked}` | Event card |
-| `fight_booked` | A fighter you follow is booked on an upcoming card | `{fightId, eventId, fighterId}` | Fight detail |
-| `fight_result` | A fight with a fighter you follow has a result | `{fightId, eventId}` | Fight detail |
-| `event_settled` | All your picks on an event are scored | `{eventId, correct, settled, points}` | Event card, with picks shown |
+| `type` | Setting | When | `data` | Tap opens |
+| --- | --- | --- | --- | --- |
+| `event_live` | `live` | An event you picked or follow a fighter on goes live | `{eventId}` | Event card |
+| `fight_result` | `results` | A fight you picked, or with a fighter you follow, has a result | `{fightId, eventId}` | Fight detail |
+| `event_settled` | `results` | All your picks on an event are scored | `{eventId, correct, settled, points}` | Event card, with picks shown |
+| `fight_booked` | `announcements` | A fighter you follow is booked on an upcoming card | `{fightId, eventId, fighterId}` | Fight detail |
+| `fighter_news` | `news` | An announcement or injury story names a fighter you follow | `{newsId, url, fighterSlug}` | The story (`url`) in the browser |
+| `event_reminder` | `reminders` | Event starts within 24 h and you have unpicked fights | `{eventId, unpicked}` | Event card |
 
-Reminders and booking alerts run hourly; results arrive within about 5 minutes of settlement. The free Render instance sleeps when idle and jobs only run while it is awake, so timing can drift until the service is on a paid plan.
+`fighter_news` titles are the publisher's headline, unchanged. Each user gets at most 3 news pushes a day; more stories still reach the inbox.
+
+The agent wakes the backend right after it saves live results or news, so those pushes arrive within minutes even on the free Render plan. Reminders and booking alerts run hourly while the service is awake.
 
 ## News
 
@@ -218,7 +224,7 @@ Build screens in this order. Each step depends only on the ones before it.
 | Auth | `POST /auth/password-reset/request`, `/password-reset/confirm` | none |
 | Me | `GET`, `PATCH /me`; `GET /me/stats`, `/me/feed`, `/me/leagues`, `/me/fighter-follows` | required |
 | Me | `GET /me/notifications`, `/me/notifications/unread-count`; `POST /me/notifications/{id}/read`, `/me/notifications/read-all` | required |
-| Me | `POST /me/devices`, `/me/devices/unregister` | required |
+| Me | `POST /me/devices`, `/me/devices/unregister`; `GET`, `PATCH /me/notification-settings` | required |
 | Events | `GET /events`, `/events/{eventId}` | none |
 | Fights | `GET /fights/{id}`, `/fights/{id}/stats`, `/fights/{id}/consensus`, `/fights/{id}/preview`, `/fights/{id}/comments` | none |
 | Fights | `POST /fights/{id}/comments`; `DELETE /comments/{commentId}` | required |
