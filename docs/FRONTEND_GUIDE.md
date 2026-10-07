@@ -17,7 +17,7 @@ Every call is JSON over HTTPS. Send the access token as `Authorization: Bearer <
 | Paging | Lists take `page` (1-based) and `limit` (1–100, default 20) and return `{data: [...], meta: {page, limit, total, totalPages}}`. |
 | Timestamps | ISO-8601 UTC strings (`2026-10-07T18:00:00Z`). Format in the user's local time. |
 | IDs | UUID strings everywhere except fighters, which you address by `slug` in URLs. |
-| Caching | `/events`, `/fighters`, `/rankings` send `Cache-Control: public, max-age=60`. Those plus `/fights`, `/leaderboard` and `/meta` send an `ETag`; resend it as `If-None-Match` and treat `304` as "use your cached copy". |
+| Caching | `/events`, `/fighters`, `/rankings`, `/news` send `Cache-Control: public, max-age=60`. Those plus `/fights`, `/leaderboard` and `/meta` send an `ETag`; resend it as `If-None-Match` and treat `304` as "use your cached copy". |
 | Rate limit | `/auth/*` allows 20 requests per minute per IP. On `429`, wait the `Retry-After` seconds before retrying. |
 | Cold start | The free Render instance sleeps after 15 idle minutes. The first request can take 30–60 s; show a loading state and don't time out under 60 s. |
 
@@ -173,6 +173,10 @@ The in-app inbox works today. Device push is wired end to end on the API side, b
 
 Reminders and booking alerts run hourly; results arrive within about 5 minutes of settlement. The free Render instance sleeps when idle and jobs only run while it is awake, so timing can drift until the service is on a paid plan.
 
+## News
+
+`GET /news` returns MMA headlines from ESPN, UFC.com and Sherdog, newest first, with the fighters each story names. Filter with `fighter=<slug>` or `kind=announcement|result|injury|rumor|news`. Show titles and summaries unchanged, credit `sourceName`, and open `url` in the browser. See [NEWS_FRONTEND_GUIDE.md](NEWS_FRONTEND_GUIDE.md) for the publisher rules, the response shape and a Flutter implementation.
+
 ## Admin
 
 Admin routes need a user whose `role` is `admin`; everyone else gets `403`. The first admin is set directly in the database (`UPDATE users SET role = 'admin' WHERE email = '...'`); after that, admins promote others through the API.
@@ -202,7 +206,8 @@ Build screens in this order. Each step depends only on the ones before it.
 7. Profile and stats (`/me`, `/me/stats`, public profiles); follow users; feed.
 8. Leaderboard tabs, then leagues (create, join by link, league leaderboard).
 9. Notification inbox and badge, then device registration.
-10. Admin screens, web only.
+10. News: home section, News screen, fighter news.
+11. Admin screens, web only.
 
 ## Endpoint index
 
@@ -226,5 +231,6 @@ Build screens in this order. Each step depends only on the ones before it.
 | Users | `POST`, `DELETE /users/{id}/follow` | required |
 | Leaderboard | `GET /leaderboard?scope=all\|month\|event\|following\|league` | following and league: required |
 | Leagues | `POST /leagues`, `/leagues/join`, `/leagues/{id}/leave`, `/leagues/{id}/invite-code`; `GET /leagues/{id}`, `/leagues/{id}/leaderboard`; `DELETE /leagues/{id}`, `/leagues/{id}/members/{userId}` | required |
+| News | `GET /news?fighter=&kind=` | none |
 | Meta | `GET /meta/last-sync`, `/health` | none |
 | Admin | everything under `/admin` | admin role |
