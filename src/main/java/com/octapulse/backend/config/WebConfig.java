@@ -50,7 +50,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(new AdminInterceptor(userRepository))
                 .addPathPatterns("/admin/**");
         registry.addInterceptor(new CatalogCacheInterceptor())
-                .addPathPatterns("/events/**", "/fighters/**", "/rankings/**");
+                .addPathPatterns("/events/**", "/fighters/**", "/rankings/**", "/news/**");
     }
 
     @Override
@@ -68,7 +68,7 @@ public class WebConfig implements WebMvcConfigurer {
     public FilterRegistrationBean<ShallowEtagHeaderFilter> etagFilter() {
         FilterRegistrationBean<ShallowEtagHeaderFilter> bean = new FilterRegistrationBean<>(new ShallowEtagHeaderFilter());
         bean.addUrlPatterns("/events", "/events/*", "/fighters", "/fighters/*", "/rankings", "/leaderboard",
-                "/fights/*", "/meta/*");
+                "/fights/*", "/meta/*", "/news");
         return bean;
     }
 
