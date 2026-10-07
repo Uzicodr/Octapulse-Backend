@@ -17,6 +17,28 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Trust X-Forwarded-For from Render's proxy so rate limiting sees the real client IP.
+  forward-headers-strategy: native
+  error:
+    include-message: always
+
+app:
+  # Used to build password reset links.
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  # Comma-separated browser origins allowed by CORS; empty disables CORS (mobile apps don't need it).
+  cors-origins: ${CORS_ORIGINS:}
+
+jobs:
+  enabled: ${JOBS_ENABLED:true}
+  settlement-interval: PT5M
+  reminder-interval: PT1H
+
+rate-limit:
+  auth-per-minute: ${AUTH_RATE_LIMIT:20}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
 
 jwt:
   secret: ${JWT_SECRET:}
