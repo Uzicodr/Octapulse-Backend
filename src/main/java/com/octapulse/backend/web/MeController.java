@@ -23,6 +23,7 @@ import com.octapulse.backend.service.LeagueService;
 import com.octapulse.backend.service.Lookups;
 import com.octapulse.backend.service.SocialService;
 import com.octapulse.backend.service.StatsService;
+import com.octapulse.backend.service.notify.NotificationSettingsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
@@ -47,6 +48,7 @@ public class MeController {
     private final FighterFollowRepository fighterFollowRepository;
     private final NotificationRepository notificationRepository;
     private final DeviceTokenRepository deviceTokenRepository;
+    private final NotificationSettingsService notificationSettings;
     private final Lookups lookups;
     private final ObjectMapper objectMapper;
 
@@ -57,6 +59,7 @@ public class MeController {
             FighterFollowRepository fighterFollowRepository,
             NotificationRepository notificationRepository,
             DeviceTokenRepository deviceTokenRepository,
+            NotificationSettingsService notificationSettings,
             Lookups lookups,
             ObjectMapper objectMapper
     ) {
@@ -66,6 +69,7 @@ public class MeController {
         this.fighterFollowRepository = fighterFollowRepository;
         this.notificationRepository = notificationRepository;
         this.deviceTokenRepository = deviceTokenRepository;
+        this.notificationSettings = notificationSettings;
         this.lookups = lookups;
         this.objectMapper = objectMapper;
     }
@@ -147,6 +151,19 @@ public class MeController {
     public UnreadCount markAllRead(HttpServletRequest request) {
         notificationRepository.markAllRead(CurrentUser.require(request), Instant.now());
         return new UnreadCount(0);
+    }
+
+    /** Which kinds of push this user gets. Everything is on until changed. */
+    @GetMapping("/notification-settings")
+    public NotificationSettingsService.Settings notificationSettings(HttpServletRequest request) {
+        return notificationSettings.get(CurrentUser.require(request));
+    }
+
+    /** Turn kinds of push on or off; omitted fields keep their value. Returns the full settings. */
+    @PatchMapping("/notification-settings")
+    public NotificationSettingsService.Settings updateNotificationSettings(
+            @RequestBody NotificationSettingsService.Update update, HttpServletRequest request) {
+        return notificationSettings.update(CurrentUser.require(request), update);
     }
 
     /** Registers (or re-assigns) a push token for this device. */
