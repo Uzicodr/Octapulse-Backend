@@ -1,6 +1,7 @@
 package com.octapulse.backend.service.notify;
 
 import com.octapulse.backend.service.PickLock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -8,15 +9,18 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.octapulse.backend.service.notify.NotificationService.EVENT_LIVE;
 import static com.octapulse.backend.service.notify.NotificationService.EVENT_REMINDER;
 import static com.octapulse.backend.service.notify.NotificationService.EVENT_SETTLED;
 import static com.octapulse.backend.service.notify.NotificationService.FIGHT_BOOKED;
 import static com.octapulse.backend.service.notify.NotificationService.FIGHT_RESULT;
+import static com.octapulse.backend.service.notify.NotificationService.FIGHTER_NEWS;
 
 /**
  * Works out who should hear about what. Every trigger is idempotent: NotificationService
@@ -25,15 +29,21 @@ import static com.octapulse.backend.service.notify.NotificationService.FIGHT_RES
 @Component
 public class NotificationTriggers {
 
+    /** Only these news kinds are worth a push; the rest are browsable in the app. */
+    private static final List<String> PUSHED_NEWS_KINDS = List.of("announcement", "injury");
+
     private final NamedParameterJdbcTemplate jdbc;
     private final NotificationService notificationService;
+    private final int maxNewsPerDay;
 
-    public NotificationTriggers(NamedParameterJdbcTemplate jdbc, NotificationService notificationService) {
+    public NotificationTriggers(NamedParameterJdbcTemplate jdbc, NotificationService notificationService,
+                                @Value("${push.max-news-per-day:3}") int maxNewsPerDay) {
         this.jdbc = jdbc;
         this.notificationService = notificationService;
+        this.maxNewsPerDay = maxNewsPerDay;
     }
 
-    /** Followers of either fighter hear the result. */
+    /** Followers of either fighter, and everyone who picked the fight, hear the result. */
     public int fightResults(Collection<UUID> fightIds) {
         if (fightIds.isEmpty()) {
             return 0;
@@ -48,7 +58,14 @@ public class NotificationTriggers {
                 LEFT JOIN fighters r ON r.id = f.red_fighter_id
                 LEFT JOIN fighters b ON b.id = f.blue_fighter_id
                 LEFT JOIN fighters w ON w.id = f.winner_fighter_id
-                JOIN fighter_follows ff ON ff.fighter_id IN (f.red_fighter_id, f.blue_fighter_id)
+                JOIN (
+                    SELECT ff.user_id, x.id AS fight_id FROM fights x
+                    JOIN fighter_follows ff ON ff.fighter_id IN (x.red_fighter_id, x.blue_fighter_id)
+                    WHERE x.id IN (:fightIds)
+                    UNION
+                    SELECT p.user_id, p.fight_id FROM picks p WHERE p.fight_id IN (:fightIds)
+                ) ff ON ff.fight_id = f.id
+                JOIN users u ON u.id = ff.user_id AND u.role <> 'agent'
                 WHERE f.id IN (:fightIds)
                 """, Map.of("fightIds", fightIds));
         int sent = 0;
@@ -183,6 +200,83 @@ public class NotificationTriggers {
             }
         }
         return sent;
+    }
+
+    /**
+     * When an event goes live (the agent's live watcher sets status 'live'), users with picks on it or
+     * following a fighter on the card hear once.
+     */
+    public int eventsLive() {
+        var rows = jdbc.queryForList("""
+                SELECT DISTINCT a.user_id, e.id AS event_id, e.name AS event_name
+                FROM events e
+                JOIN (
+                    SELECT p.user_id, f.event_id FROM picks p JOIN fights f ON f.id = p.fight_id
+                    UNION
+                    SELECT ff.user_id, f.event_id FROM fights f
+                    JOIN fighter_follows ff ON ff.fighter_id IN (f.red_fighter_id, f.blue_fighter_id)
+                ) a ON a.event_id = e.id
+                JOIN users u ON u.id = a.user_id AND u.role <> 'agent'
+                WHERE e.status = 'live' AND e.starts_at > :since
+                """, Map.of("since", Timestamp.from(Instant.now().minus(12, ChronoUnit.HOURS))));
+        int sent = 0;
+        for (var row : rows) {
+            String eventId = row.get("event_id").toString();
+            if (notificationService.notify((UUID) row.get("user_id"), EVENT_LIVE, eventId,
+                    row.get("event_name") + " is live", "Results land here as each fight ends.",
+                    Map.of("eventId", eventId))) {
+                sent++;
+            }
+        }
+        return sent;
+    }
+
+    /**
+     * Followers of a fighter named in a fresh announcement or injury story hear about it. Each user
+     * gets at most maxNewsPerDay of these pushes a day; extra stories still reach their inbox.
+     */
+    public int fighterNews() {
+        var rows = jdbc.queryForList("""
+                SELECT DISTINCT ON (ff.user_id, n.id) ff.user_id, n.id AS news_id, n.title, n.source_name,
+                       n.url, n.kind, fr.name AS fighter_name, fr.slug AS fighter_slug
+                FROM news_items n
+                JOIN news_item_fighters nf ON nf.news_id = n.id
+                JOIN fighter_follows ff ON ff.fighter_id = nf.fighter_id
+                JOIN fighters fr ON fr.id = nf.fighter_id
+                JOIN users u ON u.id = ff.user_id AND u.role <> 'agent'
+                WHERE n.fetched_at > :since AND n.kind IN (:kinds)
+                ORDER BY ff.user_id, n.id, fr.name
+                """, Map.of("since", Timestamp.from(Instant.now().minus(6, ChronoUnit.HOURS)), "kinds", PUSHED_NEWS_KINDS));
+        Map<UUID, Long> pushedToday = new HashMap<>();
+        int sent = 0;
+        for (var row : rows) {
+            UUID userId = (UUID) row.get("user_id");
+            long today = pushedToday.computeIfAbsent(userId, this::newsPushesLastDay);
+            String newsId = row.get("news_id").toString();
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("newsId", newsId);
+            data.put("url", row.get("url"));
+            data.put("fighterSlug", row.get("fighter_slug"));
+            boolean push = today < maxNewsPerDay;
+            // Title and headline are the publisher's own words, unchanged.
+            if (notificationService.notify(userId, FIGHTER_NEWS, newsId, (String) row.get("title"),
+                    row.get("source_name") + " · " + row.get("fighter_name"), data, push)) {
+                sent++;
+                if (push) {
+                    pushedToday.put(userId, today + 1);
+                }
+            }
+        }
+        return sent;
+    }
+
+    private long newsPushesLastDay(UUID userId) {
+        Long count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM notifications WHERE user_id = :userId AND type = :type AND created_at > :since",
+                Map.of("userId", userId, "type", FIGHTER_NEWS,
+                        "since", Timestamp.from(Instant.now().minus(24, ChronoUnit.HOURS))),
+                Long.class);
+        return count == null ? 0 : count;
     }
 
     private static String describeResult(Object method, Object round) {
