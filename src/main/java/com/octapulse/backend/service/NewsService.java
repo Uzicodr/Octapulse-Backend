@@ -3,6 +3,7 @@ package com.octapulse.backend.service;
 import com.octapulse.backend.domain.Fighter;
 import com.octapulse.backend.dto.NewsDto;
 import com.octapulse.backend.dto.NewsDto.FighterRef;
+import com.octapulse.backend.dto.NewsDto.ImageCredit;
 import com.octapulse.backend.dto.PagedResponse;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -49,19 +50,23 @@ public class NewsService {
 
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM news_items n" + where, params, Long.class);
         List<Row> rows = jdbc.query("""
-                SELECT n.id, n.source, n.source_name, n.title, n.summary, n.url, n.image_url, n.kind, n.published_at
+                SELECT n.id, n.source, n.source_name, n.title, n.summary, n.url, n.image_url, n.image_credit,
+                       n.image_license, n.image_credit_url, n.kind, n.published_at
                 FROM news_items n""" + where + " ORDER BY n.published_at DESC, n.id LIMIT :limit OFFSET :offset",
                 params,
                 (rs, i) -> new Row(
                         rs.getObject("id", UUID.class), rs.getString("source"), rs.getString("source_name"),
                         rs.getString("title"), rs.getString("summary"), rs.getString("url"),
-                        rs.getString("image_url"), rs.getString("kind"),
+                        rs.getString("image_url"),
+                        rs.getString("image_credit") == null ? null : new ImageCredit(rs.getString("image_credit"),
+                                rs.getString("image_license"), rs.getString("image_credit_url")),
+                        rs.getString("kind"),
                         rs.getTimestamp("published_at").toInstant()
                 ));
 
         Map<UUID, List<FighterRef>> tags = fighterTags(rows.stream().map(Row::id).toList());
         List<NewsDto> data = rows.stream().map(r -> new NewsDto(
-                r.id(), r.source(), r.sourceName(), r.title(), r.summary(), r.url(), r.imageUrl(), r.kind(),
+                r.id(), r.source(), r.sourceName(), r.title(), r.summary(), r.url(), r.imageUrl(), r.imageCredit(), r.kind(),
                 r.publishedAt(), tags.getOrDefault(r.id(), List.of())
         )).toList();
         return PagedResponse.of(data, page, limit, total == null ? 0 : total);
@@ -88,6 +93,6 @@ public class NewsService {
     }
 
     private record Row(UUID id, String source, String sourceName, String title, String summary, String url,
-                       String imageUrl, String kind, Instant publishedAt) {
+                       String imageUrl, ImageCredit imageCredit, String kind, Instant publishedAt) {
     }
 }

@@ -16,10 +16,18 @@ public record NewsDto(
         String summary,
         String url,
         String imageUrl,
+        ImageCredit imageCredit,
         String kind,
         Instant publishedAt,
         List<FighterRef> fighters
 ) {
     public record FighterRef(UUID id, String slug, String name) {
+    }
+
+    /**
+     * Who to credit for the image. license and url are null for photos that came with the feed;
+     * when url is set, link the credit to it.
+     */
+    public record ImageCredit(String text, String license, String url) {
     }
 }
