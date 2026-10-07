@@ -11,8 +11,17 @@ The agent repo's `sync_news` job runs hourly on GitHub Actions. It reads the RSS
 | `espn` | ESPN | `https://www.espn.com/espn/rss/mma/news` |
 | `ufc` | UFC.com | `https://www.ufc.com/rss/news` |
 | `sherdog` | Sherdog | `https://www.sherdog.com/rss/news.xml` |
+| `mmaweekly` | MMA Weekly | `https://www.mmaweekly.com/feed` |
+| `bbc` | BBC Sport | `https://www.bbc.co.uk/sport/mixed-martial-arts/rss.xml` |
+| `guardian` | The Guardian | `https://www.theguardian.com/sport/ufc/rss` |
 
-None of these feeds include images, so `imageUrl` is almost always `null`. Use the first tagged fighter's photo, or a source badge, as the thumbnail.
+Every story has an `imageUrl`, picked in this order:
+
+1. The feed's own photo (MMA Weekly, BBC Sport and The Guardian have one for every story).
+2. A freely licensed Wikipedia photo of a fighter the story names (CC0, public domain, CC BY or CC BY-SA).
+3. One of four Unsplash photos of a fight inside a cage.
+
+`imageCredit` says who to credit. Show it on the image, and link it when it has a `url`; the Wikimedia licenses require that.
 
 ## Rules the UI must follow
 
@@ -47,7 +56,12 @@ The response is newest first:
       "title": "Prochazka to fight Stirling at UFC Fight Night in Qatar",
       "summary": "Jiri Prochazka will face Navajo Stirling ...",
       "url": "https://www.espn.com/mma/story/_/id/...",
-      "imageUrl": null,
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/…/1200px-JiriProchazka2022.png",
+      "imageCredit": {
+        "text": "Show Jana Krause / Wikimedia Commons",
+        "license": "CC BY 3.0",
+        "url": "https://commons.wikimedia.org/wiki/File:JiriProchazka2022.png"
+      },
       "kind": "announcement",
       "publishedAt": "2026-10-06T14:13:53Z",
       "fighters": [
@@ -63,7 +77,8 @@ The response is newest first:
 | Field | Notes |
 | --- | --- |
 | `summary` | Plain text with HTML removed. Can be `null`. |
-| `imageUrl` | `https` image from the feed, usually `null`. |
+| `imageUrl` | `https` image. Rarely `null` (only between a story arriving and the agent's image step). |
+| `imageCredit` | `{text, license, url}` or `null`. `license` and `url` are `null` for feed photos, whose credit is the photographer as the publisher gave it. Show "Photo: {text}", add " · {license}" when it isn't "Unsplash License", and open `url` on tap. |
 | `kind` | Matched from headline keywords, so it can be wrong. Use it for a small badge or a filter chip, not for anything important. |
 | `fighters` | 0–6 fighters named in the title or summary, sorted by name. Use them for chips that open `/fighter/:slug`. |
 
