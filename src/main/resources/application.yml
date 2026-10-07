@@ -61,3 +61,13 @@ jwt:
 
 google:
   client-id: ${GOOGLE_CLIENT_ID:}
+
+push:
+  # Firebase service-account JSON (raw or base64). Empty keeps pushes in the log only.
+  fcm-credentials: ${FIREBASE_CREDENTIALS:}
+  # Most fighter-news pushes one user gets in 24 hours; more stay in the inbox only.
+  max-news-per-day: ${MAX_NEWS_PUSHES_PER_DAY:3}
+
+internal:
+  # Shared secret the agent sends to POST /internal/notify. Empty disables the endpoint.
+  token: ${INTERNAL_TOKEN:}
