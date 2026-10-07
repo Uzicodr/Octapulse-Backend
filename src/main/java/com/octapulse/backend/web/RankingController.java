@@ -1,7 +1,9 @@
 package com.octapulse.backend.web;
 
+import com.octapulse.backend.domain.Ranking;
 import com.octapulse.backend.dto.RankingDto;
 import com.octapulse.backend.repository.RankingRepository;
+import com.octapulse.backend.service.Lookups;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,9 +17,11 @@ import java.util.stream.Collectors;
 public class RankingController {
 
     private final RankingRepository rankingRepository;
+    private final Lookups lookups;
 
-    public RankingController(RankingRepository rankingRepository) {
+    public RankingController(RankingRepository rankingRepository, Lookups lookups) {
         this.rankingRepository = rankingRepository;
+        this.lookups = lookups;
     }
 
     @GetMapping
@@ -25,6 +29,7 @@ public class RankingController {
         var rows = (division == null || division.isBlank())
                 ? rankingRepository.findAllByOrderByDivisionAscRankAsc()
                 : rankingRepository.findByDivisionOrderByRankAsc(division);
-        return rows.stream().map(RankingDto::from).collect(Collectors.toList());
+        var fighters = lookups.fighters(rows.stream().map(Ranking::getFighterId).toList());
+        return rows.stream().map(r -> RankingDto.from(r, fighters.get(r.getFighterId()))).collect(Collectors.toList());
     }
 }
