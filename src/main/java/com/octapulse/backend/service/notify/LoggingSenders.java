@@ -7,23 +7,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Placeholder senders used until a real push/email provider is configured.
+ * Placeholder email sender used until a real provider is configured. Push is set up in PushConfig.
  * They never log message bodies, since those can carry password reset links.
  */
 @Configuration
 public class LoggingSenders {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingSenders.class);
-
-    @Bean
-    @ConditionalOnMissingBean
-    public PushSender pushSender() {
-        return (devices, title, body, data) -> {
-            if (!devices.isEmpty()) {
-                log.debug("push not configured; dropped '{}' for {} device(s)", title, devices.size());
-            }
-        };
-    }
 
     @Bean
     @ConditionalOnMissingBean
