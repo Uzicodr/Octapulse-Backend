@@ -5,6 +5,13 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
+    # Deploy only after GitHub CI passes, and skip deploys for docs-only commits.
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - src/**
+        - pom.xml
+        - Dockerfile
     envVars:
       - key: DATABASE_URL
         sync: false
