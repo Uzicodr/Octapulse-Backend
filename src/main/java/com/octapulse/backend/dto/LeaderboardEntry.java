@@ -7,6 +7,11 @@ public record LeaderboardEntry(
         String username,
         long correctPicks,
         long settledPicks,
-        double accuracy
+        double accuracy,
+        long rank,
+        long points,
+        String displayName,
+        String avatarUrl,
+        boolean ai
 ) {
 }
